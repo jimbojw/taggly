@@ -4,7 +4,10 @@
  */
 (function(){
 console.clear();
-	var undefined, stack = [], re = /(^|\s)taggable(\s|$)/, elems = document.getElementsByTagName('*');
+	var undefined, window = this, taggly = window.taggly;
+	if (taggly === undefined) taggly = window.taggly = {};
+	var re = taggly.classre || /(^|\s)taggable(\s|$)/;
+	var stack = [], elems = document.getElementsByTagName('*');
 	for (var i=0, l=elems.length, pos=0; i<l; i++) {
 		var elem = elems[i];
 		if (elem.nodeType===1 && elem.className && re.test(elem.className)) stack[pos++] = elem;
@@ -35,7 +38,7 @@ console.clear();
 	pop.className = "tagglypop";
 	pop.style.display = "none";
 	document.body.appendChild(pop);
-	function taggly (data) {
+	function callback (data) {
 		var ul = pop.getElementsByTagName('ul')[0];
 		ul.innerHTML = '';
 		var max = 0;
@@ -76,15 +79,16 @@ console.clear();
 			loaded = true;
 			script.onload = script.onreadystatechange = null;
 			document.body.removeChild(script);
-			window.taggly = null;
+			taggly.callback = null;
 		};
-		window.taggly = taggly;
+		taggly.callback = callback;
 		document.body.appendChild(script);
 		console.log(targ.taggly.url);
 		return false;
 	}
-	if (document.body.addEventListener) document.body.addEventListener( 'click', onclick, false );
-	else if (document.body.attachEvent) document.body.attachEvent( 'onclick', onclick );
+	//if (document.body.addEventListener) document.body.addEventListener( 'click', onclick, false );
+	//else if (document.body.attachEvent) document.body.attachEvent( 'onclick', onclick );
+	document.body.onclick = onclick;
 	// http://www.flickr.com/photos/shawnzlea/501267892/
 	var css = [
 		".tagglytag span { display: none; }",
@@ -125,6 +129,8 @@ console.clear();
 })();
 
 /*
+$$('.tagglytag').forEach( function(item) { item.parentNode.removeChild(item); } );
+window.taggly = { classre: /(^|\s)taggedlink(\s|$)/ };
 var script = document.createElement('script'), loaded = false;
 script.setAttribute('type', 'text/javascript');
 script.setAttribute('src', 'http://localhost:8080/static/taggly.js');

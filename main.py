@@ -1,6 +1,10 @@
-import json
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
+
+try:
+	import json
+except ImportError:
+	import simplejson as json
 
 class MainHandler(webapp.RequestHandler):
 	def get(self):
@@ -21,7 +25,7 @@ class TagsHandler(webapp.RequestHandler):
 			"size7": 7,
 			"size8": 8,
 		}
-		self.response.out.write('taggly(%s);' % json.dumps(data))
+		self.response.out.write('taggly.callback(%s);' % json.dumps(data))
 
 application = webapp.WSGIApplication(
 	[
