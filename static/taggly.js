@@ -6,38 +6,39 @@
 console.clear();
 	var undefined, window = this, taggly = window.taggly;
 	if (taggly === undefined) taggly = window.taggly = {};
-	var re = taggly.classre || /(^|\s)taggable(\s|$)/;
-	var stack = [], elems = document.getElementsByTagName('*');
-	for (var i=0, l=elems.length, pos=0; i<l; i++) {
-		var elem = elems[i];
-		if (elem.nodeType===1 && elem.className && re.test(elem.className)) stack[pos++] = elem;
+	var classre = taggly.classre || /(^|\s)taggable(\s|$)/, hrefre = /^https?:\/\/./;
+	var elems = [], links = document.getElementsByTagName('*');
+	for (var i=0, l=links.length, len=0; i<l; i++) {
+		var link = links[i], node = link, url = link.href;
+		if (!url || !hrefre.test(url) || url.indexOf(document.location.href + '#')===0) continue;
+		while (node && (!node.className || !classre.test(node.className))) node = node.parentNode;
+		if (node) elems[len++] = link;
 	}
-	delete elems;
-	if (!stack.length) return;
-	var elems = [], len = 0, re = /^https?:\/\//;
-	while (stack.length) {
-		var elem = stack.shift(), tag = elem.tagName.toLowerCase();
-		if (
-			(tag === "a" && elem.href && re.test(elem.href)) ||
-			(tag === "img" && elem.src && re.test(elem.src))
-		) {
-			var url = elem.href || elem.src;
-			if (url.indexOf(document.location.href + '#')!==0) {
-				elems[len++] = elem;
-				continue;
-			}
-		}
-		for (var j=0, m=elem.childNodes.length; j<m; j++) {
-			var child = elem.childNodes[j];
-			if (child.nodeType===1) stack[stack.length] = child;
-		}
-	}
+	delete links;
 	if (!len) return;
 	var pop = document.createElement('div');
-	pop.innerHTML = '<h3><span>taggly tags</span></h3><ul></ul>';
+	pop.innerHTML = [
+		"<a href=\"\" title=\"close\" class=\"close\"><span>close</span></a>",
+		"<h3><a href=\"\" title=\"taggly tags\"><span>taggly tags</span></a></h3>",
+		"<ul></ul>",
+		"<p><label>Add: <input type=\"text\" /></label></p>",
+	].join('');
 	pop.className = "tagglypop";
 	pop.style.display = "none";
+	pop.getElementsByTagName('a')[0].onclick = function() {
+		pop.style.display = "none";
+		return false;
+	};
 	document.body.appendChild(pop);
+	function position(obj) {
+		if (!obj.offsetParent) return { "left": 0, "top": 0 };
+		var left = obj.offsetLeft, top = obj.offsetTop;
+		while (obj = obj.offsetParent) {
+			left += obj.offsetLeft;
+			top += obj.offsetTop;
+		}
+		return { "left": left, "top": top };
+	}
 	function callback (data) {
 		var ul = pop.getElementsByTagName('ul')[0];
 		ul.innerHTML = '';
@@ -50,14 +51,15 @@ console.clear();
 		for (var k in data) {
 			if (!Object.prototype.hasOwnProperty.call(data, k)) continue;
 			var li = document.createElement('li');
-			li.innerHTML = '<span></span>';
+			li.innerHTML = [
+				"<span></span> "
+			].join('');
 			var span = li.getElementsByTagName('span')[0];
-			span.appendChild(document.createTextNode(k + " "));
+			span.appendChild(document.createTextNode(k));
 			var size = parseInt(data[k]) || 0;
 			span.style.fontSize = Math.round(12 + 8 * size * max) + "px";
 			ul.appendChild(li);
 		}
-		pop.style.display = '';
 		console.dir(data);
 	}
 	function onclick(e) {
@@ -80,6 +82,10 @@ console.clear();
 			script.onload = script.onreadystatechange = null;
 			document.body.removeChild(script);
 			taggly.callback = null;
+			var pos = position(targ);
+			pop.style.left = pos.left + "px";
+			pop.style.top = pos.top + "px";
+			pop.style.display = '';
 		};
 		taggly.callback = callback;
 		document.body.appendChild(script);
@@ -97,10 +103,24 @@ console.clear();
 			"background: transparent url(http://localhost:8080/static/images/handprint-light.gif) no-repeat 50% 50%;",
 		"}",
 		".tagglytag a:hover { background-image: url(http://localhost:8080/static/images/handprint.gif); }",
-		".tagglypop { width: 250px; position: absolute; }",
+		".tagglypop {",
+			"width: 250px; position: absolute; z-index: 10000;",
+			"background: white; border: 1px solid #ccc;",
+			"text-align: left; padding: 0.5em;",
+		"}",
+		".tagglypop .close {",
+			"float: right;",
+		"}",
+		".tagglypop h3 { height: 24px; font-size: 18px; line-height: 18px; margin: 0; }",
+		".tagglypop h3 a {",
+			"padding-left: 30px;",
+			"background: transparent url(http://localhost:8080/static/images/handprint-light.gif) no-repeat 0% 50%;",
+		"}",
+		".tagglypop h3 a:hover { background-image: url(http://localhost:8080/static/images/handprint.gif); }",
 		".tagglypop ul { margin: 0; }",
 		".tagglypop li { display: inline; }",
-	''].join('');
+		".tagglypop input { width: 15em; }",
+	''].join("\n");
 	var style = document.createElement('style');
 	style.setAttribute('type', 'text/css');
 	var head = document.getElementsByTagName('head')[0];
@@ -129,7 +149,7 @@ console.clear();
 })();
 
 /*
-$$('.tagglytag').forEach( function(item) { item.parentNode.removeChild(item); } );
+$$('.tagglytag, .tagglypop').forEach( function(item) { item.parentNode.removeChild(item); } );
 window.taggly = { classre: /(^|\s)taggedlink(\s|$)/ };
 var script = document.createElement('script'), loaded = false;
 script.setAttribute('type', 'text/javascript');
